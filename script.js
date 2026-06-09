@@ -9,20 +9,13 @@ tflite.setWasmPath('./libs/');
 
 // ─── Le tue 71 classi in perfetto ordine alfabetico da Colab ───
 const CLASSI = [
-    "aeroplane", "backpack", "banana", "baseball bat", "baseball glove", "bear", "bed", "bench", "bicycle", "bird",
-    "boat", "book", "bottle", "bowl", "broccoli", "bus", "cake", "car", "carrot", "cat",
-    "cell phone", "chair", "clock", "cup", "diningtable", "dog", "donut", "elephant", "fork", "frisbee",
-    "giraffe", "handbag", "horse", "hot dog", "kite", "knife", "laptop", "microwave", "motorbike", "mouse",
-    "orange", "oven", "person", "pizza", "pottedplant", "refrigerator", "remote", "sandwich", "scissors", "sink",
-    "skateboard", "skis", "snowboard", "sofa", "spoon", "sports ball", "stop sign", "suitcase", "teddy bear", "tennis racket",
-    "tie", "toilet", "toothbrush", "traffic light", "train", "truck", "tvmonitor", "umbrella", "vase", "wine glass",
-    "zebra"
+    "car", "person", "pole", "stump", "tractor", "tree"
 ];
 
 const LABEL_FONT      = 'bold 15px monospace';
 const LABEL_HEIGHT    = 22;
 const BOX_COLOR       = '#22c55e';
-const SCORE_THRESHOLD = 0.40; 
+const SCORE_THRESHOLD = 0.20; 
 const IOU_THRESHOLD   = 0.45;
 const MAX_DETECTIONS  = 6;
 const NUM_CLASSES     = CLASSI.length; 
