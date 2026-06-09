@@ -9,7 +9,7 @@ tflite.setWasmPath('./libs/');
 
 // ─── Le tue 71 classi in perfetto ordine alfabetico da Colab ───
 const CLASSI = [
-    "car", "person", "pole", "stump", "tractor", "tree"
+    "ashcan", "car", "person", "pole", "stump", "tractor", "tree", "warning_column"
 ];
 
 const LABEL_FONT      = 'bold 15px monospace';
