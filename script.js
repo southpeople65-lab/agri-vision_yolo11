@@ -7,7 +7,7 @@ ctx.imageSmoothingEnabled = true;
 
 tflite.setWasmPath('./libs/');
 
-// ─── Le tue 71 classi in perfetto ordine alfabetico da Colab ───
+// ─── Le tue  classi in perfetto ordine alfabetico da Colab ───
 const CLASSI = [
     "ashcan", "car", "person", "pole", "stump", "tractor", "tree", "warning_column"
 ];
