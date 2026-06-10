@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agrivision-v3';
+const CACHE_NAME = 'agrivision-v4';
 const ASSETS = [
     './',
     './index.html',
