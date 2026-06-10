@@ -7,7 +7,7 @@ ctx.imageSmoothingEnabled = true;
 
 tflite.setWasmPath('./libs/');
 
-// ─── CLASSI AGGIORNATE (9 elementi, in ordine dal data.yaml) ───
+// ─── CLASSI (9 elementi, in ordine esatto dal data.yaml) ───
 const CLASSI = [
     "ashcan", "car", "person", "pole", "posts", "stump", "tractor", "tree", "warning_column"
 ];
@@ -18,7 +18,7 @@ const BOX_COLOR        = '#22c55e';
 const SCORE_THRESHOLD  = 0.20; 
 const IOU_THRESHOLD    = 0.45;
 const MAX_DETECTIONS   = 6;
-const NUM_CLASSES      = CLASSI.length; // Ora calcola automaticamente 9
+const NUM_CLASSES      = CLASSI.length; // 9
 const NUM_BOXES        = 8400;
 const MODEL_INPUT_SIZE = 640; // Dimensione di input del modello per la scalatura
 
@@ -84,19 +84,22 @@ async function predict(model) {
             let topClassId = -1;
             let topScore   = 0;
 
-            // ─── FIX: SCALATURA COORDINATE ───
-            // YOLOv8 restituisce coordinate assolute (es. da 0 a 640). 
-            // Dobbiamo scalarle sulle dimensioni reali del canvas.
             const scaleX = canvas.width / MODEL_INPUT_SIZE;
             const scaleY = canvas.height / MODEL_INPUT_SIZE;
 
-            // 1. Estrazione geometrica dei candidati (Shape Channels First: [1, 13, 8400])
+            // 1. Estrazione geometrica dei candidati (Shape TFLite: [1, 8400, 13])
+            const NUM_ELEMENTS = 4 + NUM_CLASSES; // 13 valori per ogni box
+
             for (let b = 0; b < NUM_BOXES; b++) {
                 let maxScore = 0;
                 let classId  = -1;
+                
+                // Offset per saltare di 13 in 13 nel tensore
+                const offset = b * NUM_ELEMENTS;
 
+                // Trova la classe con lo score più alto per questo box
                 for (let c = 0; c < NUM_CLASSES; c++) {
-                    const score = data[(4 + c) * NUM_BOXES + b];
+                    const score = data[offset + 4 + c];
                     if (score > maxScore) {
                         maxScore = score;
                         classId  = c;
@@ -109,10 +112,10 @@ async function predict(model) {
                 }
 
                 if (maxScore > SCORE_THRESHOLD) {
-                    const cx = data[0 * NUM_BOXES + b];
-                    const cy = data[1 * NUM_BOXES + b];
-                    const w  = data[2 * NUM_BOXES + b];
-                    const h  = data[3 * NUM_BOXES + b];
+                    const cx = data[offset + 0];
+                    const cy = data[offset + 1];
+                    const w  = data[offset + 2];
+                    const h  = data[offset + 3];
 
                     const xmin = (cx - w / 2) * scaleX;
                     const ymin = (cy - h / 2) * scaleY;
@@ -149,6 +152,7 @@ async function predict(model) {
             }
 
             const topN = scelti.slice(0, MAX_DETECTIONS);
+
             // ─── LOG DI DEBUG PER LE CLASSI ───
             if (topN.length > 0) {
                 const logRilevamenti = topN.map(box => `${CLASSI[box.classId]} (${Math.round(box.score * 100)}%)`);
