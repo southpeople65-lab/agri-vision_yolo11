@@ -149,6 +149,12 @@ async function predict(model) {
             }
 
             const topN = scelti.slice(0, MAX_DETECTIONS);
+            // ─── LOG DI DEBUG PER LE CLASSI ───
+            if (topN.length > 0) {
+                const logRilevamenti = topN.map(box => `${CLASSI[box.classId]} (${Math.round(box.score * 100)}%)`);
+                console.log("🔍 Rilevati:", logRilevamenti.join(" | "));
+            }
+            // ──────────────────────────────────
 
             // 4. Rendering grafico sul Canvas
             ctx.font = LABEL_FONT;
