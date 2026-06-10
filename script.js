@@ -7,19 +7,20 @@ ctx.imageSmoothingEnabled = true;
 
 tflite.setWasmPath('./libs/');
 
-// ─── Le tue  classi in perfetto ordine alfabetico da Colab ───
+// ─── ATTENZIONE: Il modello attuale ha 6 classi, ma lasciamo l'array 
+// completo. Prenderà in automatico le prime 6 finché non aggiorni il file .tflite
+// ho messo others al posto di ashcan
 const CLASSI = [
-    "ashcan", "car", "person", "pole", "posts", "stump", "tractor", "tree", "warning_column"
+    "others", "car", "person", "pole", "posts", "stump", "tractor", "tree", "warning_column"
 ];
 
-const LABEL_FONT      = 'bold 15px monospace';
-const LABEL_HEIGHT    = 22;
-const BOX_COLOR       = '#22c55e';
-const SCORE_THRESHOLD = 0.20; 
-const IOU_THRESHOLD   = 0.45;
-const MAX_DETECTIONS  = 6;
-const NUM_CLASSES     = CLASSI.length; 
-const NUM_BOXES       = 8400;
+const LABEL_FONT       = 'bold 15px monospace';
+const LABEL_HEIGHT     = 22;
+const BOX_COLOR        = '#22c55e';
+const SCORE_THRESHOLD  = 0.40; // Alzato leggermente per pulire i falsi positivi
+const IOU_THRESHOLD    = 0.45;
+const MAX_DETECTIONS   = 6;
+const MODEL_INPUT_SIZE = 640; 
 
 function syncCanvasSize() {
     const rect = canvas.getBoundingClientRect();
@@ -67,7 +68,7 @@ async function predict(model) {
         syncCanvasSize();
 
         input = tf.browser.fromPixels(video)
-            .resizeBilinear([640, 640])
+            .resizeBilinear([MODEL_INPUT_SIZE, MODEL_INPUT_SIZE])
             .toFloat()
             .div(255.0)
             .expandDims(0);
@@ -77,22 +78,30 @@ async function predict(model) {
 
         if (result) {
             const data = await result.data();
+            
+            // ─── LETTURA DINAMICA DELLA SHAPE ───
+            // Legge i dati [1, 10, 8400] direttamente dal modello
+            const channels = result.shape[1]; // Es. 10
+            const numBoxes = result.shape[2]; // Es. 8400
+            const numClassesModel = channels - 4; // 10 - 4 = 6 classi reali!
+            
             result.dispose();
 
             const candidati = [];
             let topClassId = -1;
             let topScore   = 0;
 
-            const scaleX = canvas.width;
-            const scaleY = canvas.height;
+            const scaleX = canvas.width / MODEL_INPUT_SIZE;
+            const scaleY = canvas.height / MODEL_INPUT_SIZE;
 
-            // 1. Estrazione geometrica dei candidati
-            for (let b = 0; b < NUM_BOXES; b++) {
+            // 1. Estrazione geometrica dinamica (Channels First)
+            for (let b = 0; b < numBoxes; b++) {
                 let maxScore = 0;
                 let classId  = -1;
-
-                for (let c = 0; c < NUM_CLASSES; c++) {
-                    const score = data[(4 + c) * NUM_BOXES + b];
+                
+                // Cerca la classe migliore solo tra quelle che il modello possiede
+                for (let c = 0; c < numClassesModel; c++) {
+                    const score = data[(4 + c) * numBoxes + b];
                     if (score > maxScore) {
                         maxScore = score;
                         classId  = c;
@@ -105,10 +114,10 @@ async function predict(model) {
                 }
 
                 if (maxScore > SCORE_THRESHOLD) {
-                    const cx = data[0 * NUM_BOXES + b];
-                    const cy = data[1 * NUM_BOXES + b];
-                    const w  = data[2 * NUM_BOXES + b];
-                    const h  = data[3 * NUM_BOXES + b];
+                    const cx = data[0 * numBoxes + b];
+                    const cy = data[1 * numBoxes + b];
+                    const w  = data[2 * numBoxes + b];
+                    const h  = data[3 * numBoxes + b];
 
                     const xmin = (cx - w / 2) * scaleX;
                     const ymin = (cy - h / 2) * scaleY;
@@ -122,7 +131,7 @@ async function predict(model) {
             // 2. Ordinamento
             candidati.sort((a, b) => b.score - a.score);
 
-            // 3. Algoritmo Non-Maximum Suppression (NMS)
+            // 3. NMS
             const scelti = [];
             for (const box of candidati) {
                 let sovrapposto = false;
@@ -146,11 +155,21 @@ async function predict(model) {
 
             const topN = scelti.slice(0, MAX_DETECTIONS);
 
-            // 4. Rendering grafico sul Canvas
+            // ─── LOG DI DEBUG ───
+            if (topN.length > 0) {
+                // Recuperiamo il nome in modo sicuro, o diamo "Classe Sconosciuta" se l'indice è fuori dall'array
+                const logRilevamenti = topN.map(box => {
+                    const nomeClasse = CLASSI[box.classId] || `Classe_${box.classId}`;
+                    return `${nomeClasse} (${Math.round(box.score * 100)}%)`;
+                });
+                console.log("🔍 Rilevati:", logRilevamenti.join(" | "));
+            }
+
+            // 4. Rendering
             ctx.font = LABEL_FONT;
             for (const box of topN) {
                 const pct       = Math.round(box.score * 100);
-                const etichetta = `${CLASSI[box.classId]} ${pct}%`;
+                const etichetta = `${CLASSI[box.classId] || `Cl_${box.classId}`} ${pct}%`;
                 const labelW    = ctx.measureText(etichetta).width;
 
                 ctx.strokeStyle = BOX_COLOR;
@@ -165,17 +184,15 @@ async function predict(model) {
                 ctx.fillText(etichetta, box.xmin + 5, labelY + LABEL_HEIGHT - 5);
             }
 
-            // 5. Aggiornamento interfaccia testuale
+            // 5. UI Testuale
             if (topN.length > 0) {
                 output.innerHTML = `Rilevati <span style="color:#22c55e;font-weight:bold;">${topN.length}</span> elementi`;
-            } else if (topClassId !== -1 && topScore > 0.15) {
-                output.innerHTML = `Analisi: Rilevato ${CLASSI[topClassId]} con confidenza bassa (${Math.round(topScore * 100)}%)`;
             } else {
-                output.innerHTML = "Scansione AgriVision attiva... Inquadra un elemento";
+                output.innerHTML = "Scansione attiva...";
             }
         }
     } catch (err) {
-        output.innerHTML = `<span style="color:#ef4444;">Errore ciclo predizione: ${err.message}</span>`;
+        output.innerHTML = `<span style="color:#ef4444;">Errore predizione: ${err.message}</span>`;
         if (input) input.dispose();
         return;
     }
