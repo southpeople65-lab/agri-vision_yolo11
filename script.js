@@ -10,7 +10,7 @@ tflite.setWasmPath('./libs/');
 // ─── Le tue  classi in perfetto ordine alfabetico da Colab ───
 // ho inserito others al posto di ashcan in modo che se è un falso positivo non importa. mi vede ostacolo
 const CLASSI = [
-    "others", "car", "person", "pole", "posts", "stump", "tractor", "tree", "warning_column"
+    "others", "car", "person", "pole", "stump", "tree", "warning_column"
 ];
 
 const LABEL_FONT      = 'bold 15px monospace';
