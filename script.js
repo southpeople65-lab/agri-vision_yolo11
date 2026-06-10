@@ -74,6 +74,9 @@ async function predict(model) {
             .expandDims(0);
 
         const result = model.predict(input);
+        // ─── INSERISCI QUESTA RIGA QUI ───
+        console.log("SHAPE DEL MODELLO:", result.shape);
+        // ─────────────────────────────────
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (result) {
