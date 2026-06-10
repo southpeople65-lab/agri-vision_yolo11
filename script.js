@@ -7,19 +7,20 @@ ctx.imageSmoothingEnabled = true;
 
 tflite.setWasmPath('./libs/');
 
-// ─── Le tue  classi in perfetto ordine alfabetico da Colab ───
+// ─── CLASSI AGGIORNATE (9 elementi, in ordine dal data.yaml) ───
 const CLASSI = [
     "ashcan", "car", "person", "pole", "posts", "stump", "tractor", "tree", "warning_column"
 ];
 
-const LABEL_FONT      = 'bold 15px monospace';
-const LABEL_HEIGHT    = 22;
-const BOX_COLOR       = '#22c55e';
-const SCORE_THRESHOLD = 0.20; 
-const IOU_THRESHOLD   = 0.45;
-const MAX_DETECTIONS  = 6;
-const NUM_CLASSES     = CLASSI.length; 
-const NUM_BOXES       = 8400;
+const LABEL_FONT       = 'bold 15px monospace';
+const LABEL_HEIGHT     = 22;
+const BOX_COLOR        = '#22c55e';
+const SCORE_THRESHOLD  = 0.20; 
+const IOU_THRESHOLD    = 0.45;
+const MAX_DETECTIONS   = 6;
+const NUM_CLASSES      = CLASSI.length; // Ora calcola automaticamente 9
+const NUM_BOXES        = 8400;
+const MODEL_INPUT_SIZE = 640; // Dimensione di input del modello per la scalatura
 
 function syncCanvasSize() {
     const rect = canvas.getBoundingClientRect();
@@ -67,7 +68,7 @@ async function predict(model) {
         syncCanvasSize();
 
         input = tf.browser.fromPixels(video)
-            .resizeBilinear([640, 640])
+            .resizeBilinear([MODEL_INPUT_SIZE, MODEL_INPUT_SIZE])
             .toFloat()
             .div(255.0)
             .expandDims(0);
@@ -83,10 +84,13 @@ async function predict(model) {
             let topClassId = -1;
             let topScore   = 0;
 
-            const scaleX = canvas.width;
-            const scaleY = canvas.height;
+            // ─── FIX: SCALATURA COORDINATE ───
+            // YOLOv8 restituisce coordinate assolute (es. da 0 a 640). 
+            // Dobbiamo scalarle sulle dimensioni reali del canvas.
+            const scaleX = canvas.width / MODEL_INPUT_SIZE;
+            const scaleY = canvas.height / MODEL_INPUT_SIZE;
 
-            // 1. Estrazione geometrica dei candidati
+            // 1. Estrazione geometrica dei candidati (Shape Channels First: [1, 13, 8400])
             for (let b = 0; b < NUM_BOXES; b++) {
                 let maxScore = 0;
                 let classId  = -1;
